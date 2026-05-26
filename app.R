@@ -531,7 +531,7 @@ server <- function(input, output, session) {
             group_by(category) %>%
             gt() %>%
             data_color(columns = "Score",
-                       colors = scales::col_bin(palette = c("green", "orange", "red"),
+                       fn = scales::col_bin(palette = c("green", "orange", "red"),
                                                  bins = c(1, 4, 10, 27)),
                        apply_to = "text") %>% 
             cols_align(columns = 2:5, 
@@ -575,7 +575,7 @@ server <- function(input, output, session) {
             gt() %>%
             cols_align(align = "center") %>% 
             data_color(columns = c('ClinO A', 'ClinO B', 'ClinO C'),
-                       colors = scales::col_factor(palette = c("green", "yellow", "orange"),
+                       fn = scales::col_factor(palette = c("green", "yellow", "orange"),
                                                    levels = c('low-risk', 'medium-risk', 'high-risk'))) %>%
             tab_style(locations = cells_body(rows = overall()$row,
                                              columns = paste("ClinO", input$clino_cat)),
@@ -599,7 +599,7 @@ server <- function(input, output, session) {
             data_color(columns = c('Swiss categorization A', 
                                    'Swiss categorization B', 
                                    'Swiss categorization C'),
-                       colors = scales::col_factor(palette = c("green", "yellow", "orange"),
+                       fn = scales::col_factor(palette = c("green", "yellow", "orange"),
                                                    levels = c('low-risk', 'medium-risk', 'high-risk'))) %>% 
             tab_options(table.font.size = "normal")
         
