@@ -618,29 +618,29 @@ server <- function(input, output, session) {
             # can happen when deployed).
             
             tempdir <- tempdir()
-            tempReport <- file.path(tempdir, "report.Rmd")
-            file.copy("report.Rmd", tempReport, overwrite = TRUE)
+            tempReport <- file.path(tempdir, "report.qmd")
+            file.copy("report.qmd", tempReport, overwrite = TRUE)
             file.copy("www/SCTO_Platforms.png", file.path(tempdir, "logo.png"), overwrite = TRUE)
             
-            # Set up parameters to pass to Rmd document
+            # Set up parameters to pass to qmd document
             params <- list(input = reactiveValuesToList(input),
                            texttab = texttab, 
                            overall = overall(),
                            ids = ids())
             
-            # Knit the document, passing in the `params` list, and eval it in a
-            # child of the global environment (this isolates the code in the document
-            # from the code in this app).
-            
-            dput(params, file = "PARAMS.R")
+            # Render to a fixed filename next to the input (Quarto's rule:
+            # output_file must be a bare filename, not a path).
+            out_name <- "report.pdf"
             
             show_modal_spinner(text = "Compiling PDF",
                                spin = "folding-cube")
-            rmarkdown::render(input = tempReport, 
-                              output_file = file,
-                              params = params,
-                              envir = new.env(parent = globalenv())
-                              )
+            quarto::quarto_render(
+              input          = tempReport,
+              output_file    = out_name,
+              execute_params = params
+            )
+            # Now move the rendered file to where Shiny expects it.
+            file.copy(file.path(tempdir, out_name), file, overwrite = TRUE)
             remove_modal_spinner()
         }
     )

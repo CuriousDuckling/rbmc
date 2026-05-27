@@ -1,0 +1,194 @@
+---
+# title: "Risk Based Monitoring Score"
+format:
+  typst:
+    papersize: a4
+    margin:
+      x: 2.5cm
+      y: 2.5cm
+params:
+  input: NA
+  texttab: NA
+  overall: NA
+  ids: NA
+---
+
+```{r setup, include = FALSE}
+options(Encoding = "UTF-8")
+library(gt)
+library(dplyr)
+library(magrittr)
+library(tidyr)
+library(xtable)
+library(flextable)
+set_flextable_defaults(fonts_ignore = TRUE, 
+                       font.size = 9)
+```
+
+```{=typst}
+#set text(size: 11pt)
+
+// Page header (study name left, render date right) and footer
+#set page(
+  header: [
+    #grid(
+      columns: (1fr, 1fr),
+      align(left)[`r params$input$studyname`],
+      align(right)[Report date: `r format(Sys.time())`]
+    )
+    #line(length: 100%, stroke: 0.5pt)
+  ],
+  footer: grid(
+    columns: (1fr, 1fr),
+    align(left)[Produced with #link("https://aghaynes.shinyapps.io/rbmc")[RBMSC], V1.2],
+    align(right)[
+      #context [#counter(page).display() of #counter(page).final().first()]
+    ]
+  )
+)
+```
+
+```{=typst}
+// Title block: large title + project/author on the left, logo on the right.
+#grid(
+  columns: (3fr, 1fr),
+  column-gutter: 1em,
+  [
+    #v(0.5cm)
+    #text(size: 22pt, weight: "bold")[Risk Based Monitoring Score]
+    #v(0.4cm)
+    #text(size: 15pt)[*Project:* `r params$input$studyname`]
+    #linebreak()
+    #linebreak()
+    #text(size: 15pt)[*Author:* `r params$input$au`]
+  ],
+  align(right + top)[
+    #image("logo.png", width: 100%)
+  ]
+)
+#v(0.5cm)
+```
+
+## Summary
+
+```{r inputs, echo = FALSE}
+inputs <- params$input
+inputs <- inputs[!names(inputs) == "sidebarItemExpanded"]
+
+mat <- tibble::tribble(
+  ~'Number of risks',                                  ~'ClinO A', ~'ClinO B', ~'ClinO C',
+  'Less than 6 medium risks, no high risks',           'low',      'low',      'medium',
+  '6 to 12 medium risks or 1 high risk',               'low',      'medium',   'high',
+  'More than 12 medium risks, more than 1 high risk',  'medium',   'high',     'high'
+)
+
+# mat is a tibble — [row, col] returns a 1x1 tibble. Extract the scalar.
+txt <- mat[[paste("ClinO", params$input$clino_cat)]][params$overall$row]
+```
+
+Swiss risk category: `r inputs$clino_cat`
+
+Based on the assumptions fed into the RBM score calculator, the study risk is `r txt` and we thus recommend applying the monitoring strategy for **`r txt`-risk trials**.
+
+```{=typst}
+#align(center)[
+```
+```{r overall-table, echo = FALSE}
+overall <- data.frame(Level = c("High", "Medium", "Low"),
+           N = c(params$overall$High, params$overall$Medium, params$overall$Low))
+names(overall)[2] <- "Number of risks"
+overall %>% 
+  flextable() %>% 
+  autofit() 
+```
+```{=typst}
+]
+```
+
+`#linebreak() `{=typst}
+The following risks are rated as high in this trial:
+
+```{r high-risk, echo = FALSE}
+tmp <- as.data.frame(inputs) %>%
+  mutate(across(everything(), as.character)) %>%
+  pivot_longer(cols = everything(), 
+               names_to = c("i", "j"), 
+               names_pattern = "(.*)_(imp|occ|det|tx|appl|note)$") %>%
+  filter(!is.na(i)) %>%
+  pivot_wider(id_cols = "i", names_from = "j", values_from = "value") %>%
+  mutate(imp = factor(imp, c("Low", "Moderate", "High")),
+         occ = factor(occ, c("Rare", "Occasional", "Frequent")),
+         det = factor(det, c("Simple", "Moderate", "Difficult")),
+         across(c("imp", "occ", "appl", "det"), as.numeric),
+         across(c("imp", "occ", "det"), ~ case_when(appl == 0 ~ 0,
+                                                  TRUE ~ .)),
+         score = imp*occ*det,
+         appl = case_when(grepl("other", .data$i) ~ 1,
+                          TRUE ~ appl)) %>% 
+  filter(grepl(paste0("other(", paste0(params$ids, collapse = "|"), ")"), .data$i) | !grepl("other", .data$i))
+  
+
+# browser()
+tmp2 <- as.data.frame(params$texttab) %>%
+  full_join(tmp, by = c("ref" = "i")) 
+
+tmp2 %>% 
+  filter(score > 9) %>% 
+  select(category, Risk, note) %>% 
+  rename(Category = category,
+         Description = note) %>% 
+  flextable() %>% 
+  width(1, 2.5, unit = "cm") %>% 
+  width(2, 4, unit = "cm") %>% 
+  width(3, 9, unit = "cm")
+```
+
+`#linebreak() `{=typst}
+The following risks are rated as medium in this trial:
+
+```{r medium-risk, echo = FALSE}
+tmp2 %>% 
+  filter(score > 3 & score <= 9) %>% 
+  select(category, Risk, note) %>% 
+  rename(Category = category,
+         Description = note) %>% 
+  flextable() %>% 
+  width(1, 2.5, unit = "cm") %>% 
+  width(2, 4, unit = "cm") %>% 
+  width(3, 9, unit = "cm")
+```
+
+```{=typst}
+// Switch to landscape for the wide all-risks table, then back.
+#pagebreak()
+#set page(flipped: true)
+```
+
+### All risks
+```{r risk-tabs-clean, echo = FALSE}
+if("tx" %in% names(tmp)) tmp2 <- tmp2 %>% 
+  mutate(Risk = case_when(!is.na(Risk) ~ Risk,
+                          is.na(Risk) ~ tx))
+
+tmp2 %>%
+  mutate(category = case_when(!is.na(category) ~ category,
+                              is.na(category) ~ "VII. Other Risks")) %>%
+  select(category, Risk, note, imp, occ, det, score) %>%
+  rename(Impact = imp,
+         Occurance = occ,
+         Detectability = det,
+         Score = score,
+         Category = category,
+         Note = note
+         ) %>% 
+  gt() %>% 
+  tab_options(table.font.size = px(9)) %>%
+  cols_width(Category ~ 2,Risk ~ 2, Note ~ 3, everything() ~ 1) %>% 
+  sub_missing(columns = c(Impact, Occurance, Detectability, Score),
+    missing_text = "0") %>%
+  sub_missing(columns = Note, rows = everything(), missing_text = "")
+```
+
+```{=typst}
+#set page(flipped: false)
+```
