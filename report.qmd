@@ -17,12 +17,34 @@ params:
 options(Encoding = "UTF-8")
 library(gt)
 library(dplyr)
-library(magrittr)
 library(tidyr)
-library(xtable)
-library(flextable)
-set_flextable_defaults(fonts_ignore = TRUE, 
-                       font.size = 9)
+
+style_gt <- function(gt_tbl) {
+  n_rows <- nrow(gt_tbl$`_data`)
+  
+  gt_tbl %>% 
+    tab_options(table.font.size = px(12)) %>%
+    tab_style(
+      style = cell_borders(sides = "top", weight = px(1.5)),
+      locations = cells_column_labels()
+    ) %>%
+    tab_style(
+      style = cell_borders(sides = "bottom", weight = px(1.5)),
+      locations = cells_column_labels()
+    ) %>%
+    tab_style(
+      style = cell_borders(sides = "top", weight = px(1.5)),
+      locations = cells_body(rows = seq_len(n_rows) == 1)
+    ) %>%
+    tab_style(
+      style = cell_borders(sides = "bottom", weight = px(1.5)),
+      locations = cells_body(rows = seq_len(n_rows) == n_rows)
+    ) %>%
+    tab_style(
+      style = cell_text(align = "left"),
+      locations = cells_column_labels()
+    )
+}
 ```
 
 ```{=typst}
@@ -40,7 +62,7 @@ set_flextable_defaults(fonts_ignore = TRUE,
   ],
   footer: grid(
     columns: (1fr, 1fr),
-    align(left)[Produced with #link("https://aghaynes.shinyapps.io/rbmc")[RBMSC], V1.2],
+    align(left)[Produced with RBMSC, V1.2],
     align(right)[
       #context [#counter(page).display() of #counter(page).final().first()]
     ]
@@ -75,7 +97,7 @@ set_flextable_defaults(fonts_ignore = TRUE,
 inputs <- params$input
 inputs <- inputs[!names(inputs) == "sidebarItemExpanded"]
 
-mat <- tibble::tribble(
+mat <- tribble(
   ~'Number of risks',                                  ~'ClinO A', ~'ClinO B', ~'ClinO C',
   'Less than 6 medium risks, no high risks',           'low',      'low',      'medium',
   '6 to 12 medium risks or 1 high risk',               'low',      'medium',   'high',
@@ -98,8 +120,8 @@ overall <- data.frame(Level = c("High", "Medium", "Low"),
            N = c(params$overall$High, params$overall$Medium, params$overall$Low))
 names(overall)[2] <- "Number of risks"
 overall %>% 
-  flextable() %>% 
-  autofit() 
+  gt() %>% 
+  style_gt()
 ```
 ```{=typst}
 ]
@@ -109,6 +131,7 @@ overall %>%
 The following risks are rated as high in this trial:
 
 ```{r high-risk, echo = FALSE}
+# Prepare data for table generation
 tmp <- as.data.frame(inputs) %>%
   mutate(across(everything(), as.character)) %>%
   pivot_longer(cols = everything(), 
@@ -125,37 +148,55 @@ tmp <- as.data.frame(inputs) %>%
          score = imp*occ*det,
          appl = case_when(grepl("other", .data$i) ~ 1,
                           TRUE ~ appl)) %>% 
-  filter(grepl(paste0("other(", paste0(params$ids, collapse = "|"), ")"), .data$i) | !grepl("other", .data$i))
+  filter(grepl(paste0("other(", paste0(params$ids, collapse = "|"), ")"), .data$i) | !grepl("other", .data$i)) 
   
-
-# browser()
+#Rename labels and incorporate information from 'Other Risks'
 tmp2 <- as.data.frame(params$texttab) %>%
-  full_join(tmp, by = c("ref" = "i")) 
+  full_join(tmp, by = c("ref" = "i")) %>%     
+  mutate(Impact = imp,
+         Occurance = occ,
+         Detectability = det,
+         Score = score,
+         Category = category,
+         Description = note
+         ) %>%
+  mutate(Category = case_when(!is.na(Category) ~ Category,
+                              is.na(Category) ~ "VII. Other Risks"))
+
+  if("tx" %in% names(tmp)) tmp2 <- tmp2 %>% 
+  mutate(Risk = case_when(!is.na(Risk) ~ Risk,
+                          is.na(Risk) ~ tx),
+         Description = case_when(!is.na(Description) ~ Description,
+                             is.na(Description) ~ ""))
+
 
 tmp2 %>% 
-  filter(score > 9) %>% 
-  select(category, Risk, note) %>% 
-  rename(Category = category,
-         Description = note) %>% 
-  flextable() %>% 
-  width(1, 2.5, unit = "cm") %>% 
-  width(2, 4, unit = "cm") %>% 
-  width(3, 9, unit = "cm")
+  filter(Score > 9) %>% 
+  select(Category, Risk, Description) %>% 
+  gt() %>% 
+  style_gt() %>%
+  cols_width(
+  Category ~ pct(20),
+  Risk ~ pct(26),
+  Description ~ pct(54)
+) %>%
+tab_options(table.width = pct(100))
 ```
-
 `#linebreak() `{=typst}
 The following risks are rated as medium in this trial:
 
 ```{r medium-risk, echo = FALSE}
 tmp2 %>% 
-  filter(score > 3 & score <= 9) %>% 
-  select(category, Risk, note) %>% 
-  rename(Category = category,
-         Description = note) %>% 
-  flextable() %>% 
-  width(1, 2.5, unit = "cm") %>% 
-  width(2, 4, unit = "cm") %>% 
-  width(3, 9, unit = "cm")
+  filter(Score > 3 & Score <= 9) %>% 
+  select(Category, Risk, Description) %>% 
+  gt() %>% 
+  style_gt() %>%
+  cols_width(
+  Category ~ pct(20),
+  Risk ~ pct(26),
+  Description ~ pct(54)
+) %>%
+tab_options(table.width = pct(100))
 ```
 
 ```{=typst}
@@ -166,24 +207,15 @@ tmp2 %>%
 
 ### All risks
 ```{r risk-tabs-clean, echo = FALSE}
-if("tx" %in% names(tmp)) tmp2 <- tmp2 %>% 
-  mutate(Risk = case_when(!is.na(Risk) ~ Risk,
-                          is.na(Risk) ~ tx))
 
 tmp2 %>%
-  mutate(category = case_when(!is.na(category) ~ category,
-                              is.na(category) ~ "VII. Other Risks")) %>%
-  select(category, Risk, note, imp, occ, det, score) %>%
-  rename(Impact = imp,
-         Occurance = occ,
-         Detectability = det,
-         Score = score,
-         Category = category,
-         Note = note
-         ) %>% 
+  mutate(Note = Description) %>%
+  select(Category, Risk, Note, Impact, Occurance, Detectability, Score) %>%
   gt() %>% 
+  style_gt() %>%
   tab_options(table.font.size = px(9)) %>%
-  cols_width(Category ~ 2,Risk ~ 2, Note ~ 3, everything() ~ 1) %>% 
+  cols_width(Category ~ pct(10), Risk ~ pct(18), Note ~ pct(45)) %>%
+  tab_options(table.width = pct(100))%>%
   sub_missing(columns = c(Impact, Occurance, Detectability, Score),
     missing_text = "0") %>%
   sub_missing(columns = Note, rows = everything(), missing_text = "")
