@@ -48,10 +48,12 @@ report_test <- function(clino_cat,
         app$set_inputs(!!paste0(r, "_imp") := "1")
         app$set_inputs(!!paste0(r, "_occ") := "1")
         app$set_inputs(!!paste0(r, "_det") := "1")
+        app$wait_for_idle()
       } else if (r %in% chosen_high) {
         app$set_inputs(!!paste0(r, "_imp") := "2")
         app$set_inputs(!!paste0(r, "_occ") := "2")
         app$set_inputs(!!paste0(r, "_det") := "2")
+        app$wait_for_idle()
       }
     }
   }
