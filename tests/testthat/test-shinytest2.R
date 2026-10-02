@@ -41,6 +41,7 @@ report_test <- function(clino_cat,
   for (tab in names(risks)) {
     # visit the tab so its renderUI() runs and the inputs exist
     app$click(selector = sprintf("a[data-value='%s']", tab))
+    app$wait_for_idle()
     for (r in risks[[tab]]) {
       app$set_inputs(!!paste0(r, "_imp") := "0")
       app$set_inputs(!!paste0(r, "_occ") := "0")
