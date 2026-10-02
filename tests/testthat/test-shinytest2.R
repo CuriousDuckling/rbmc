@@ -1,18 +1,28 @@
 library(shinytest2)
 library(pdftools)
 
+log_file <- "test-log.txt"
+
+log <- function(...) {
+  cat(..., "\n", file = log_file, append = TRUE)
+}
+
 report_test <- function(clino_cat,
                         num_highr,
                         num_mediumr,
                         num_lowr,
                         result_risk) {
+  
+  log("Starting test for ClinO category: ", clino_cat)
+  log("high risks: ", num_highr, ", medium risks: ", num_mediumr, ", low risks: ", num_lowr)
+  
   app <- AppDriver$new(
     test_path("../.."),
     variant = platform_variant(),
     name = "rbmc",
     height = 631,
     width = 979,
-    timeout = 60000
+    #timeout = 60000
   )
   
   app$set_inputs(clino_cat = clino_cat)
@@ -39,22 +49,22 @@ report_test <- function(clino_cat,
   
   # Loop through the tabs and set the inputs for the chosen risks
   for (tab in names(risks)) {
-    message("Visiting tab: ", tab)
+    log("Visiting tab: ", tab)
     # visit the tab so its renderUI() runs and the inputs exist
     app$click(selector = sprintf("a[data-value='%s']", tab))
     app$wait_for_idle()
     for (r in risks[[tab]]) {
-      message("Setting applicable: ", r)
+      log(" Setting applicable: ", r)
       app$set_inputs(!!paste0(r, "_appl") := "1")
       app$wait_for_idle()
       if (r %in% chosen_medium) {
-        message("Setting medium risk: ", r)
+        log(" Setting medium risk: ", r)
         app$set_inputs(!!paste0(r, "_imp") := "1")
         app$set_inputs(!!paste0(r, "_occ") := "1")
         app$set_inputs(!!paste0(r, "_det") := "1")
         app$wait_for_idle()
       } else if (r %in% chosen_high) {
-        message("Setting high risk: ", r)
+        log(" Setting high risk: ", r)
         app$set_inputs(!!paste0(r, "_imp") := "2")
         app$set_inputs(!!paste0(r, "_occ") := "2")
         app$set_inputs(!!paste0(r, "_det") := "2")
