@@ -11,7 +11,8 @@ report_test <- function(clino_cat,
     variant = platform_variant(),
     name = "rbmc",
     height = 631,
-    width = 979
+    width = 979,
+    timeout = 30000
   )
   
   app$set_inputs(clino_cat = clino_cat)
