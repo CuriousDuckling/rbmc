@@ -28,6 +28,7 @@ report_test <- function(clino_cat,
     "VI. Data"        = "data"
   )
   #choose number of random risks to mark as applicable (Plus 1 will be 'other risk')
+  set.seed(123)
   chosen <- texttab[sample(nrow(texttab), sum(num_highr, num_mediumr, num_lowr) -
                              1), ]
   chosen_medium <- chosen$ref[seq_len(num_mediumr)]
@@ -42,6 +43,7 @@ report_test <- function(clino_cat,
     app$wait_for_idle()
     for (r in risks[[tab]]) {
       app$set_inputs(!!paste0(r, "_appl") := "1")
+      app$wait_for_idle()
       if (r %in% chosen_medium) {
         app$set_inputs(!!paste0(r, "_imp") := "1")
         app$set_inputs(!!paste0(r, "_occ") := "1")
