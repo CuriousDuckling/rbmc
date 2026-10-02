@@ -15,8 +15,6 @@ jobs:
       matrix:
         os:
           - windows-latest
-          - macos-latest
-          - ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
@@ -27,12 +25,6 @@ jobs:
 
       - name: Set up Quarto 
         uses: quarto-dev/quarto-actions/setup@v2
-      
-      - name: Install system dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libpoppler-cpp-dev
           
       - name: Install R packages
         shell: Rscript {0}
