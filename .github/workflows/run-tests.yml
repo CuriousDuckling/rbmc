@@ -6,67 +6,45 @@ on:
 
 jobs:
   run-tests:
-    runs-on: ${{ matrix.config.os }}
+    runs-on: ${{ matrix.os }}
 
-    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+    name: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - { os: windows-latest, r: 'release' }
-          - { os: macos-latest, r: 'release' }
-          - { os: ubuntu-24.04, r: 'release', rspm: "https://packagemanager.rstudio.com/cran/__linux__/jammy/latest" }
-
-    env:
-      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
-      RSPM: ${{ matrix.config.rspm }}
+        os:
+          - windows-latest
+          - macos-latest
+          - ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-r@v2
         with:
-          r-version: ${{ matrix.config.r }}
+          r-version: 'release'
 
       - uses: r-lib/actions/setup-pandoc@v2
 
-      - name: Query dependencies
-        run: |
-          install.packages('remotes')
-          saveRDS(
-            remotes::dev_package_deps(dependencies = TRUE),
-            ".github/depends.Rds",
-            version = 2
-          )
-          writeLines(
-            sprintf("R-%i.%i", getRversion()$major, getRversion()$minor),
-            ".github/R-version"
-          )
+      - name: Install R packages
         shell: Rscript {0}
-
-      - name: Cache R packages
-        if: runner.os != 'Windows'
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-${{ hashFiles('.github/depends.Rds') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-
-
-      - name: Install system dependencies
-        if: runner.os == 'Linux'
-        env:
-          RHUB_PLATFORM: linux-x86_64-ubuntu-gcc
         run: |
-          Rscript -e "remotes::install_github('r-hub/sysreqs')"
-          sysreqs=$(Rscript -e "cat(sysreqs::sysreq_commands('DESCRIPTION'))")
-          sudo -s eval "$sysreqs"
-
-      - name: Install dependencies
-        run: |
-          remotes::install_deps(dependencies = TRUE)
-        shell: Rscript {0}
+          install.packages(c(
+            "shiny",
+            "flexdashboard",
+            "shinydashboard",
+            "gt",
+            "dplyr",
+            "magrittr",
+            "tidyr",
+            "shinybusy",
+            "shinyBS",
+            "shinyWidgets",
+            "shinyjs",
+            "shinytest2",
+            "pdftools"
+          ))
 
       - name: Run tests
         shell: Rscript {0}
@@ -77,5 +55,5 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-r${{ matrix.config.r }}-tests
+          name: ${{ runner.os }}-tests
           path: tests
