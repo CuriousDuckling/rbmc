@@ -24,6 +24,12 @@ report_test <- function(clino_cat,
     width = 979,
     #timeout = 60000
   )
+  # Set the initial inputs for the app to start up everything correctly
+  app$set_inputs(I_comp_imp = "Low")
+  app$set_inputs(I_comp_occ = "Rare")
+  app$set_inputs(I_comp_det = "Simple")
+  app$set_inputs(I_comp_appl = "0")
+  app$set_inputs(I_comp_note = "")
   
   app$set_inputs(clino_cat = clino_cat)
   
