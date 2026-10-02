@@ -61,7 +61,11 @@ report_test <- function(clino_cat,
     app$wait_for_idle()
     for (r in risks[[tab]]) {
       log(" Setting applicable: ", r)
+      app$set_inputs(!!paste0(r, "_imp") := "0")
+      app$set_inputs(!!paste0(r, "_occ") := "0")
+      app$set_inputs(!!paste0(r, "_det") := "0")
       app$set_inputs(!!paste0(r, "_appl") := "1")
+      app$set_inputs(!!paste0(r, "_note") := "")
       app$wait_for_idle()
       if (r %in% chosen_medium) {
         log(" Setting medium risk: ", r)
