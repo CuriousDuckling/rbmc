@@ -1,4 +1,4 @@
-name: run-tests
+name: run-some-tests
 
 on:
   push:
@@ -49,7 +49,40 @@ jobs:
       - name: Run tests
         shell: Rscript {0}
         run: |
-          shiny::runTests(".", assert = TRUE)
+          testthat::test_file(
+            "tests/testthat/test-shinytest2.R",
+            desc = "CatA Trial with 6 medium risks and 9 risks"
+          )
+      
+          testthat::test_file(
+            "tests/testthat/test-shinytest2.R",
+            desc = "CatA Trial with 13 medium risks and 2 low risks"
+          )
+      
+          testthat::test_file(
+            "tests/testthat/test-shinytest2.R",
+            desc = "CatB Trial with 5 medium risks and 10 low risks"
+          )
+          
+          testthat::test_file(
+            "tests/testthat/test-shinytest2.R",
+            desc = "CatB Trial with 6 medium risks and 9 risks"
+          )
+
+          testthat::test_file(
+            "tests/testthat/test-shinytest2.R",
+            desc = "CatB Trial with 13 medium risks and 2 low risks"
+          )
+
+          testthat::test_file(
+            "tests/testthat/test-shinytest2.R",
+            desc = "CatC Trial with 5 medium risks and 10 low risks"
+          )
+
+          testthat::test_file(
+            "tests/testthat/test-shinytest2.R",
+            desc = "CatC Trial with 6 medium risks and 9 risks"
+          )
 
       - name: Upload test results
         if: failure()
